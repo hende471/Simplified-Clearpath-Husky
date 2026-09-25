@@ -1,0 +1,33 @@
+# Runs the Husky platform stack directly on the host, as the user named after
+# the @ (for example husky-platform@ubuntu.service). It uses the same
+# entrypoint.sh as the Docker image. native/install.sh installs this unit.
+[Unit]
+Description=Clearpath Husky A200 platform stack (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=%i
+Environment=CONFIG_DIR=/etc/husky_platform
+Environment=ROS_LOG_DIR=/var/log/husky-platform
+Environment=RCUTILS_COLORIZED_OUTPUT=0
+# This only applies when zenoh is enabled. Set it to 0 if the host already
+# runs a zenoh router that the stack should join.
+Environment=START_ZENOH_ROUTER=1
+LogsDirectory=husky-platform
+ExecStart=/bin/bash /opt/husky_platform/entrypoint.sh
+# The entrypoint exits when robot.yaml changes or a supervised process dies,
+# and systemd then starts it again with a freshly generated config.
+Restart=always
+RestartSec=2
+# Only the entrypoint receives SIGTERM, so it can stop the launches first and
+# the zenoh router last. Anything still running after the timeout is killed.
+KillMode=mixed
+TimeoutStopSec=20
+# This lets the controller_manager run its update thread with real-time
+# (SCHED_FIFO) priority without running as root.
+LimitRTPRIO=99
+
+[Install]
+WantedBy=multi-user.target

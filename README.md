@@ -50,8 +50,10 @@ restarts with the new namespace.
 | `zenoh_router.json5` | zenoh router config (optional) |
 | `ros_env.sh` | ROS env for `docker exec` shells |
 | `host/70-clearpath-husky.rules` | udev: `/dev/clearpath/prolific`, `/dev/input/ps5` |
+| `native/install.sh` | native install on Ubuntu 24.04, no Docker |
+| `native/husky-platform@.service` | systemd unit for the native install |
 
-## Setup
+## Setup (Docker)
 
 1. Install Docker with the compose plugin.
 2. Install the udev rules:
@@ -81,6 +83,41 @@ restarts with the new namespace.
 Power on the Husky base before the container starts. The container does not
 retry the MCU; if the base was off, run `docker compose restart`.
 
+## Native install (systemd, no Docker)
+
+Requires Ubuntu 24.04 (arm64 or amd64). Runs the same `entrypoint.sh` as the
+container, as a systemd service.
+
+```bash
+./native/install.sh
+```
+
+It installs the ROS 2 and Clearpath packages, builds `clearpath_robot` in
+`/opt/husky_ws`, installs the udev rules, copies `robot.yaml` and
+`zenoh_router.json5` to `/etc/husky_platform/` (existing files are kept),
+and enables `husky-platform@$USER.service`. Pair the gamepad as in step 4
+above.
+
+| path | purpose |
+|---|---|
+| `/etc/husky_platform/robot.yaml` | robot config; editing it restarts the service |
+| `/etc/clearpath/` | generated config, rewritten on every start |
+| `/opt/husky_platform/` | `entrypoint.sh`, `ros_env.sh` |
+| `/var/log/husky-platform/` | ROS logs |
+
+```bash
+systemctl status husky-platform@$USER
+journalctl -fu husky-platform@$USER
+sudo systemctl restart husky-platform@$USER
+sudo systemctl disable --now husky-platform@$USER
+source /opt/husky_platform/ros_env.sh    # ROS environment in a shell
+```
+
+As with the container, the service does not retry the MCU. If the base was
+off when it started, restart the service.
+
+Do not run the native service and the container at the same time.
+
 ## Usage
 
 ```bash
@@ -103,8 +140,9 @@ same network.
 
 **zenoh** (optional): uncomment the `middleware:` block in `robot.yaml`.
 The container starts `rmw_zenohd` with `zenoh_router.json5`, or joins an
-existing router on `localhost:7447`. Set `START_ZENOH_ROUTER: "0"` in
-`compose.yaml` to always use the host's router. Other machines connect with
+existing router on `localhost:7447`. To always use the host's router, set
+`START_ZENOH_ROUTER` to `0` in `compose.yaml`, or in the systemd unit for a
+native install. Other machines connect with
 `ZENOH_CONFIG_OVERRIDE='connect/endpoints=["tcp/<robot-ip>:7447"]'`.
 
 ## Notes
@@ -114,3 +152,10 @@ existing router on `localhost:7447`. Set `START_ZENOH_ROUTER: "0"` in
   reboot the Pi during a full image build.
 - New apt packages go in the last `RUN` layer of the `Dockerfile` to avoid a
   full rebuild.
+
+## License
+
+MIT, see [LICENSE](LICENSE). The udev rules are adapted from Clearpath's
+`clearpath_robot` (BSD-3-Clause), and `zenoh_router.json5` is adapted from
+`rmw_zenoh` (Apache-2.0). The Clearpath packages the image builds and
+installs keep their own licenses.

@@ -1,5 +1,6 @@
-# Run on the companion computer wired to the Husky MCU. Only one platform
-# stack per robot: two would publish duplicate /a200_0000/* topics.
+# Run this on the companion computer that is wired to the Husky MCU. Run only
+# one platform stack per robot, because two would publish duplicate
+# /a200_0000/* topics.
 services:
   platform:
     build: .
@@ -10,25 +11,30 @@ services:
     # Share /dev/shm with the host so Fast DDS shared-memory transport works
     # with other ROS containers on the same host.
     ipc: host
-    # Run the mounted entrypoint so edits need a restart, not a rebuild.
+    # The entrypoint runs from the mounted directory, so an edit to it only
+    # needs a container restart, not an image rebuild.
     entrypoint: ["bash", "/config/entrypoint.sh"]
     volumes:
       - .:/config:ro
       - /dev:/dev
       - ./data:/data
-    # Device majors: 188 ttyUSB (MCU), 13 input (joystick), 242 hidraw (pad
-    # link quality). hidraw's major varies: check `grep hidraw /proc/devices`.
+    # These rules allow access to three device types: 188 is ttyUSB (the MCU),
+    # 13 is input (the joystick) and 242 is hidraw (used to read the gamepad's
+    # link quality). The hidraw number can differ between hosts, so check it
+    # with `grep hidraw /proc/devices`.
     device_cgroup_rules:
       - "c 188:* rmw"
       - "c 13:* rmw"
       - "c 242:* rmw"
-    # SCHED_FIFO for the controller_manager update thread.
+    # These let the controller_manager run its update thread with real-time
+    # (SCHED_FIFO) priority.
     cap_add:
       - SYS_NICE
     ulimits:
       rtprio: 99
     stop_grace_period: 20s
     environment:
-      # Zenoh only: set to "0" if the host already runs a zenoh router.
+      # This only applies when zenoh is enabled. Set it to "0" if the host
+      # already runs a zenoh router that the container should join.
       START_ZENOH_ROUTER: "1"
       RCUTILS_COLORIZED_OUTPUT: "0"

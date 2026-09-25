@@ -1,8 +1,11 @@
-# Clearpath Husky A200 platform stack for any Docker host (arm64 or amd64).
+# This image runs the Clearpath Husky A200 platform stack on any Docker host,
+# arm64 or amd64.
 #
-# Clearpath ships clearpath_robot (A200 hardware plugin, robot-side generator,
-# sensor configs) for amd64 only. Everything else is on packages.ros.org for
-# both arches, so those three packages are built here from the tagged source.
+# Clearpath publishes the clearpath_robot packages (the A200 hardware plugin,
+# the robot-side generator and the sensor configs) for amd64 only. Everything
+# else is available on packages.ros.org for both architectures, so this image
+# installs it from there and builds the three missing packages from the
+# tagged clearpath_robot source.
 FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -18,8 +21,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 \
     && rm -rf /var/lib/apt/lists/*
 
-# ROS 2 Jazzy, Clearpath packages from the ROS build farm, and the runtime
-# dependencies of the generated A200 platform launch.
+# This layer installs ROS 2 Jazzy, the Clearpath packages from the ROS build
+# farm, and every package the generated A200 platform launch needs at runtime.
+# native/install.sh installs the same list, so keep the two in sync.
 RUN curl -fsSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
         | gpg --dearmor -o /usr/share/keyrings/ros-archive-keyring.gpg \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu noble main" \
@@ -50,8 +54,12 @@ RUN curl -fsSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
         build-essential cmake git \
     && rm -rf /var/lib/apt/lists/*
 
-# clearpath_sensors is config/launch only: the generator needs its share dir.
-# Its driver dependencies are not installed.
+# clearpath_sensors contains only launch and parameter files for the sensors
+# Clearpath supports. The Clearpath generators look up its install directory
+# even when robot.yaml lists no sensors, so it has to be built. Its sensor
+# driver dependencies are not installed, to keep the image small. If you add
+# a sensor to robot.yaml, add that sensor's driver package (for example
+# ros-jazzy-realsense2-camera) to the last RUN layer below.
 ARG CLEARPATH_ROBOT_TAG=2.9.8
 WORKDIR /opt/husky_ws
 RUN git clone --depth 1 -b "${CLEARPATH_ROBOT_TAG}" \
@@ -65,7 +73,8 @@ RUN git clone --depth 1 -b "${CLEARPATH_ROBOT_TAG}" \
     && colcon build --merge-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
     && rm -rf build log
 
-# Extra tools go in this last layer so adding one does not rebuild the image.
+# Add extra tools to this last layer. Changing an earlier layer rebuilds every
+# layer after it, which takes a long time on small computers.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ros-jazzy-ros2controlcli \
     && rm -rf /var/lib/apt/lists/*

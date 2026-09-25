@@ -7,8 +7,9 @@ system:
       ip: 192.168.131.1
   ros2:
     namespace: a200_0000
-    # Default middleware: Fast DDS, simple discovery.
-    # For zenoh, uncomment (router config: zenoh_router.json5):
+    # With no middleware block, Clearpath uses Fast DDS with simple discovery.
+    # To use zenoh instead, uncomment the block below. The router is then
+    # configured by zenoh_router.json5.
     # middleware:
     #   implementation: rmw_zenoh_cpp
     #   profile: /etc/clearpath/zenoh_router.json5

@@ -1,12 +1,16 @@
-/// Optional zenoh router config (used only with rmw_zenoh_cpp, see robot.yaml).
-/// Based on rmw_zenoh_cpp 0.2.9 DEFAULT_RMW_ZENOH_ROUTER_CONFIG.json5.
-/// Changes from default:
-///  - multicast + multihop gossip scouting with router autoconnect, so
-///    routers on the same LAN find each other with no configured address.
-///  - lease 10 s / keep_alive 4: a vanished peer is dropped within 10 s.
-///  - block.wait_before_close 1 s.
-/// Set scouting.multicast.interface to the robot LAN interface (e.g. eth0).
-/// Remote routers can dial this one at tcp/<robot-ip>:7447.
+/// This is the optional zenoh router config. It is only used when robot.yaml
+/// selects rmw_zenoh_cpp.
+/// It is based on DEFAULT_RMW_ZENOH_ROUTER_CONFIG.json5 from rmw_zenoh_cpp
+/// 0.2.9, with these changes:
+///  - Multicast scouting and multihop gossip are enabled, and routers
+///    connect to the routers they discover. Routers on the same LAN find
+///    each other without a configured address.
+///  - The link lease is 10 s with keep_alive 4, so a peer that disappears
+///    is dropped within 10 s.
+///  - block.wait_before_close is 1 s.
+/// Set scouting.multicast.interface to the robot's LAN interface, for
+/// example eth0. Other routers can connect to this one at
+/// tcp/<robot-ip>:7447.
 {
   mode: "router",
   connect: {
