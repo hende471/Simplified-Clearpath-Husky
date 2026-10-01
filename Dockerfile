@@ -73,10 +73,18 @@ RUN git clone --depth 1 -b "${CLEARPATH_ROBOT_TAG}" \
     && colcon build --merge-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
     && rm -rf build log
 
-# Add extra tools to this last layer. Changing an earlier layer rebuilds every
-# layer after it, which takes a long time on small computers.
+# Add extra tools and keyboard teleop to this last layer. Changing an earlier
+# layer rebuilds every layer after it, which takes a long time on small computers.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ros-jazzy-ros2controlcli \
+    ros-jazzy-teleop-twist-keyboard \
+    && rm -rf /var/lib/apt/lists/*
+
+# The A100 manual recommends 0.5 m/s^2 max wheel acceleration. The A200
+# description defaults to 5.0, which the A100 MCU rejects as out of range.
+RUN xacro_file=/opt/ros/jazzy/share/clearpath_platform_description/urdf/a200/a200.urdf.xacro \
+    && grep -q '<param name="max_accel">5.0</param>' "$xacro_file" \
+    && sed -i 's|<param name="max_accel">5.0</param>|<param name="max_accel">0.5</param>|' "$xacro_file" \
     && rm -rf /var/lib/apt/lists/*
 
 COPY ros_env.sh /opt/husky_platform/ros_env.sh

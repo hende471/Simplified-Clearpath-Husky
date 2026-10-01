@@ -130,6 +130,13 @@ docker compose down
 Drive: hold **L1** + left stick. **R1** = turbo. The robot stops if the
 Bluetooth link quality drops below 40 %.
 
+Keyboard teleop (start in a terminal with the robot's wheels clear):
+```bash
+sudo docker compose exec platform bash -lc 'ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -p stamped:=true -p speed:=0.05 -p turn:=0.10 -r cmd_vel:=/a200_0000/cmd_vel'
+```
+`i` / `,` = forward / reverse, `j` / `l` = turn left / right, space = stop,
+Ctrl-C = exit.
+
 Editing `robot.yaml` restarts the container with the regenerated config.
 
 ## Middleware
@@ -148,6 +155,9 @@ native install. Other machines connect with
 ## Notes
 
 - Run only one platform stack per robot.
+- For the Husky A100 adaptation, the image changes the A200 description's
+   maximum wheel acceleration from 5.0 to the A100 manual's recommended 0.5 m/s^2.
+   The rest of the platform driver and model remain A200-specific.
 - On a Raspberry Pi, use an adequate 5 V / 5 A supply. Undervoltage can
   reboot the Pi during a full image build.
 - New apt packages go in the last `RUN` layer of the `Dockerfile` to avoid a

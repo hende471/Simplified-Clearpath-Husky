@@ -6,7 +6,7 @@
 #   sudo udevadm control --reload-rules && sudo udevadm trigger
 
 # The MCU's Prolific USB-serial adapter appears as /dev/clearpath/prolific.
-SUBSYSTEMS=="usb", ATTRS{manufacturer}=="Prolific*", SYMLINK+="clearpath/prolific clearpath/prolific_$attr{devpath}", MODE="0666"
+SUBSYSTEM=="tty", SUBSYSTEMS=="usb", ATTRS{idVendor}=="067b", ATTRS{idProduct}=="2303", SYMLINK+="clearpath/prolific clearpath/prolific_$attr{devpath}", MODE="0666"
 
 # PS4 and PS5 controllers are made readable, and the PS5 joystick appears as
 # /dev/input/ps5.
